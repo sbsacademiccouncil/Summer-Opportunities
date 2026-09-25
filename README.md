@@ -1,12 +1,14 @@
 # Summer Opportunities Directory — Technical Documentation
 
-**File:** `summer-opportunities.html`
+For those who want to recreate or edit the site.
+
+**File:** `index.html`
 **Type:** Single self-contained static HTML file (HTML + CSS + JavaScript, no build step, no external JS frameworks, no server/backend)
 **Maintained by:** The Stony Brook School Academic Council
 
 This document describes the site as currently built, in enough detail that it could be reconstructed from scratch. It also contains a **pending, unapproved spec** for the next feature (program comparison) at the end — see the note there before building it.
 
-> **Process rule (per site owner):** Any future change to the website must first be reflected in this documentation, presented for confirmation, and only implemented after approval. Update this file *before* editing `summer-opportunities.html`, not after.
+> **Process rule (per site owner):** Any future change to the website must first be reflected in this documentation, presented for confirmation, and only implemented after approval. Update this file *before* editing `index.html`, not after.
 
 ---
 
@@ -362,14 +364,14 @@ New rules added for: `.compare-overlay` (fixed, full-screen, dark backdrop), `.c
 
 ## 13. Council login & on-site editing (Firebase) — implemented
 
-**Status: built.** Backend = Firebase project `sbs-academic-council`. Site is hosted at `https://sbsacademiccouncil.github.io/Summer-Opportunities/`. Firebase SDK pinned to v10.9.0, loaded as ES modules from `gstatic.com` (the one exception to the "self-contained file" rule — this and the Google Fonts link are the only two external network dependencies the page has).
+**Status: built.** Backend = Firebase project `sbs-academic-council`. Site is hosted at `https://sbsacademiccouncil.github.io/index/`. Firebase SDK pinned to v10.9.0, loaded as ES modules from `gstatic.com` (the one exception to the "self-contained file" rule — this and the Google Fonts link are the only two external network dependencies the page has).
 
 ### 13.0 One-time setup still required outside the code (site owner only)
 I cannot reach your live Firebase project from here, so these three things must be done by hand in the Firebase console before login/editing will actually work when the page loads:
 1. **Authentication → Settings → Authorized domains** — add `sbsacademiccouncil.github.io`.
 2. **Firestore Database → Rules** — paste in the rules from §13.5 below (replacing the defaults).
 3. **Firestore Database → Data → Start collection `admins`** — add one document per Council editor, where **the document ID is the exact email** (no fields required, an empty document is fine): `terrence.wang@sbs.org`, `sarah.fay@sbs.org`, `meghan.fay@sbs.org`.
-4. When uploading to the `Summer-Opportunities` GitHub repo, name the file `index.html` at the repo root (or in whatever path GitHub Pages is configured to serve) so it loads at the URL above.
+4. When uploading to the `index` GitHub repo, name the file `index.html` at the repo root (or in whatever path GitHub Pages is configured to serve) so it loads at the URL above.
 
 The `programs` collection does **not** need manual seeding — see §13.9.
 
@@ -423,8 +425,8 @@ Firebase web API keys are **not secret** — safe to have pasted here and safe t
 1. Firebase project created at console.firebase.google.com (`sbs-academic-council`).
 2. **Authentication → Sign-in method → Google provider** enabled.
 3. **Firestore Database** enabled (rules from §13.5 to be pasted in under Firestore → Rules — see §13.0's remaining steps).
-4. A **Web App** registered inside the project, `firebaseConfig` provided and now embedded in `summer-opportunities.html`.
-5. Hosting domain confirmed: `https://sbsacademiccouncil.github.io/Summer-Opportunities/`.
+4. A **Web App** registered inside the project, `firebaseConfig` provided and now embedded in `index.html`.
+5. Hosting domain confirmed: `https://sbsacademiccouncil.github.io/index/`.
 6. Three Council member emails provided as the initial allowlist (added to Firestore per §13.0, step 3): `terrence.wang@sbs.org`, `sarah.fay@sbs.org`, `meghan.fay@sbs.org`.
 
 ### 13.7 Ownership note
@@ -436,7 +438,7 @@ Whoever creates the Firebase project should ideally be a role/advisor account ra
 - An offline/static export snapshot for archiving, since the live version now requires Firestore to be reachable.
 
 ### 13.9 Status: implemented
-§13.6's checklist is complete — real `firebaseConfig`, hosting domain (`sbsacademiccouncil.github.io`), and three sample Council emails were provided. Implementation below is now built into `summer-opportunities.html`.
+§13.6's checklist is complete — real `firebaseConfig`, hosting domain (`sbsacademiccouncil.github.io`), and three sample Council emails were provided. Implementation below is now built into `index.html`.
 
 ### 13.10 Sign-in button is deliberately understated and explicitly labeled
 Rather than a generic, prominent "Sign in" button that any visitor might be tempted to click, the button reads **"Council sign-in"**, sits small and unobtrusive in the top-right corner of the header (not the hero area), and carries a `title` tooltip ("For Academic Council editors only") on hover. The intent is that an ordinary visitor scanning the page has no reason to notice or click it, while a Council member looking for it can find it.
