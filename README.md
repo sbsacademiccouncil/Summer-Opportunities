@@ -2,13 +2,13 @@
 
 For those trying to edit or recreate this only.
 
-**File:** `summer-opportunities.html`
+**File:** `index.html`
 **Type:** Single self-contained static HTML file (HTML + CSS + JavaScript, no build step, no external JS frameworks, no server/backend)
 **Maintained by:** The Stony Brook School Academic Council
 
 This document describes the site as currently built, in enough detail that it could be reconstructed from scratch. It also contains a **pending, unapproved spec** for the next feature (program comparison) at the end — see the note there before building it.
 
-> **Process rule (per site owner):** Any future change to the website must first be reflected in this documentation, presented for confirmation, and only implemented after approval. Update this file *before* editing `summer-opportunities.html`, not after.
+> **Process rule (per site owner):** Any future change to the website must first be reflected in this documentation, presented for confirmation, and only implemented after approval. Update this file *before* editing `index.html`, not after.
 
 ---
 
@@ -364,7 +364,7 @@ New rules added for: `.compare-overlay` (fixed, full-screen, dark backdrop), `.c
 
 ## 13. Council login & on-site editing (Firebase) — approved design, blocked on setup, not yet built
 
-**Decisions confirmed:** backend = Firebase (Option A from the original proposal); a Google Cloud/Firebase project can be created/owned by the site owner; the Council allowlist will be a short list of emails, editable later without a code change. **Nothing in this section exists in `summer-opportunities.html` yet** — implementation is blocked only on the setup checklist in §13.6.
+**Decisions confirmed:** backend = Firebase (Option A from the original proposal); a Google Cloud/Firebase project can be created/owned by the site owner; the Council allowlist will be a short list of emails, editable later without a code change. **Nothing in this section exists in `index.html` yet** — implementation is blocked only on the setup checklist in §13.6.
 
 ### 13.1 Why this is a bigger change than anything so far
 Every prior feature (compare view, links) worked by adding more JavaScript on top of the same static file. This one can't, because the entire point is that **the browser can no longer be trusted to enforce "only Council members can edit."** A static file has no server standing behind it to check credentials, so this necessarily turns the site from *one self-contained file* into *one file that talks to a live backend (Firebase)*. Two consequences, stated plainly:
