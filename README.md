@@ -1,5 +1,7 @@
 # Summer Opportunities Directory — Technical Documentation
 
+For those trying to edit or recreate this only.
+
 **File:** `summer-opportunities.html`
 **Type:** Single self-contained static HTML file (HTML + CSS + JavaScript, no build step, no external JS frameworks, no server/backend)
 **Maintained by:** The Stony Brook School Academic Council
