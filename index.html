@@ -13,7 +13,7 @@ h1,h2,h3,.brand{font-family:"Bricolage Grotesque",system-ui,sans-serif;margin:0}
 a{color:var(--blue)}
 button,input,select{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--blue);outline-offset:2px}
-.top{position:sticky;top:0;z-index:5;display:flex;gap:12px;align-items:center;padding:10px 16px;background:var(--ink);color:#fff}
+.top{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:10px 16px;background:var(--ink);color:#fff}
 .brand{font-size:1.25rem;font-weight:700;text-decoration:none;color:#fff;background:linear-gradient(transparent 62%,rgba(255,216,77,.55) 62%)}
 #q{flex:1;max-width:520px;padding:8px 12px;border:0;border-radius:6px}
 .auth{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:.9rem}
@@ -50,6 +50,20 @@ dialog label{display:block;margin:12px 0 4px;font-weight:600}
 dialog input[type=text],dialog input[type=url],dialog input[type=file]{width:100%;padding:8px;border:1px solid var(--line);border-radius:6px}
 .row{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
 #toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:6px;display:none;z-index:20}
+.navl{background:none;border:0;color:#fff;text-decoration:underline;cursor:pointer;font-size:.95rem;padding:4px}
+.foot{padding:20px;text-align:center;color:var(--muted);border-top:1px solid var(--line)}
+.foot button{background:none;border:0;color:var(--blue);text-decoration:underline;cursor:pointer}
+.banner{background:var(--mark);padding:8px 12px;border-radius:6px;margin-bottom:16px;font-weight:600}
+.help{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--mark);border-radius:6px;padding:4px 18px 10px;margin:16px 0}
+.help h2{font-size:1.15rem;margin:12px 0 4px}.help li{margin:6px 0}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.chip{padding:3px 12px;border:1px solid var(--ink);border-radius:99px;background:var(--card);cursor:pointer}
+.chip.on{background:var(--ink);color:#fff}
+.cm .c{border-top:1px solid var(--line);padding:8px 0;margin-top:8px}
+.cform{display:flex;gap:6px;margin-top:8px}.cform input{flex:1;padding:6px;border:1px solid var(--line);border-radius:6px}
+.bar2{display:grid;grid-template-columns:140px 1fr 36px;gap:8px;align-items:center;margin:4px 0}
+.bar2>div{background:var(--line);border-radius:4px;height:14px}.bar2 i{display:block;height:100%;background:var(--blue);border-radius:4px}
+.lb li{margin:4px 0}
 @media(max-width:800px){.layout{grid-template-columns:1fr}aside{display:none;position:static;max-height:none}aside.open{display:block}#menu{display:inline-block}.auth span{display:none}}
 </style>
 </head>
@@ -58,19 +72,21 @@ dialog input[type=text],dialog input[type=url],dialog input[type=file]{width:100
   <button id="menu" class="btn" aria-label="Toggle class list">Classes</button>
   <a class="brand" href="#/">SBS Class Hub</a>
   <input id="q" type="search" placeholder="Search classes, teachers, resources" aria-label="Search">
+  <a class="navl" href="#/stats">Stats</a><button class="navl" id="help">Help</button>
   <div class="auth" id="auth"></div>
 </header>
 <div class="layout">
   <aside id="side"></aside>
   <main id="main"></main>
 </div>
+<footer class="foot">Something missing or broken? <button id="sug">Send a suggestion</button></footer>
 <dialog id="dlg"></dialog>
 <div id="toast" role="status"></div>
 
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {getFirestore,collection,doc,getDoc,getDocs,addDoc,setDoc,updateDoc,deleteDoc,query,where,writeBatch,increment,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getFirestore,collection,doc,getDoc,getDocs,addDoc,setDoc,updateDoc,deleteDoc,query,where,writeBatch,increment,arrayUnion,arrayRemove,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {getStorage,ref,uploadBytes,getDownloadURL,deleteObject} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 /* ==== 1. PASTE YOUR FIREBASE CONFIG HERE (Project settings > Your apps > Web) ==== */
@@ -88,10 +104,10 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const toArr=v=>Array.isArray(v)?v:String(v||'').split(',').map(x=>x.trim()).filter(Boolean);
 const MAX_MB=15;
-let user=null,admin=false,classes=[],allRes=null,filt={d:'',s:'',b:''},cur=[];
+let user=null,admin=false,realAdmin=false,asStudent=false,catSel='',classes=[],allRes=null,filt={d:'',s:'',b:''},cur=[];
 
 function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',4500)}
-const main=h=>{$('#main').innerHTML=h;scrollTo(0,0)};
+const main=h=>{$('#main').innerHTML=(asStudent?'<div class="banner">Student view: you’re seeing exactly what a student sees. Admin tools are hidden.</div>':'')+h;scrollTo(0,0)};
 function modal(h){const d=$('#dlg');d.innerHTML=h;d.showModal();d.querySelector('[data-close]')?.addEventListener('click',()=>d.close());return d}
 const isSbs=e=>/@sbs\.org$/i.test(e||'');
 const getModeration=async()=>{try{return !!(await getDoc(doc(db,'settings','global'))).data()?.moderation}catch{return false}};
@@ -99,16 +115,18 @@ const getModeration=async()=>{try{return !!(await getDoc(doc(db,'settings','glob
 /* ---------- Auth ---------- */
 onAuthStateChanged(auth,async u=>{
   if(u&&!isSbs(u.email)){await signOut(auth);toast('Sign in with your @sbs.org account.');return}
-  user=u;admin=false;
-  if(u){try{admin=(await getDoc(doc(db,'admins',u.email))).exists()}catch{}}
+  user=u;realAdmin=false;
+  if(u){try{realAdmin=(await getDoc(doc(db,'admins',u.email))).exists()}catch{}}
+  admin=realAdmin&&!asStudent;
   renderAuth();route();
 });
 function renderAuth(){
   $('#auth').innerHTML=user
-    ?`<span>${esc(user.email)}</span>${admin?'<a class="btn sm" href="#/admin">Admin</a>':''}<button class="btn sm" id="out">Sign out</button>`
+    ?`<span>${esc(user.email)}</span>${admin?'<a class="btn sm" href="#/admin">Admin</a>':''}${realAdmin?`<button class="btn sm" id="vs">${asStudent?'Exit student view':'View as student'}</button>`:''}<button class="btn sm" id="out">Sign out</button>`
     :`<button class="btn sm" id="in">Sign in with @sbs.org</button>`;
   $('#in')?.addEventListener('click',()=>{const p=new GoogleAuthProvider();p.setCustomParameters({hd:'sbs.org'});signInWithPopup(auth,p).catch(e=>toast('Sign-in failed: '+e.code))});
   $('#out')?.addEventListener('click',()=>signOut(auth));
+  $('#vs')?.addEventListener('click',()=>{asStudent=!asStudent;admin=realAdmin&&!asStudent;allRes=null;if(location.hash==='#/admin')location.hash='#/';renderAuth();route()});
 }
 
 /* ---------- Classes + sidebar ---------- */
@@ -141,7 +159,8 @@ function route(){
   if(v==='class')return viewClass(a);
   if(v==='search')return viewSearch(decodeURIComponent(a||''));
   if(v==='admin')return viewAdmin();
-  main(`<h1>Class resources, shared by students</h1><p class="empty">${classes.length?`Pick a class from the list to see notes and links. ${user?'':'Sign in with your @sbs.org account to add your own.'}`:'No classes yet. An admin needs to add the first class.'}</p>`);
+  if(v==='stats')return viewStats();
+  main(`<h1>Class resources, shared by students</h1>${helpHtml()}<p class="empty">${classes.length?`Pick a class from the list to see notes and links. ${user?'':'Sign in with your @sbs.org account to add your own.'}`:'No classes yet. An admin needs to add the first class.'}</p>`);
 }
 addEventListener('hashchange',route);
 $('#menu').onclick=()=>$('#side').classList.toggle('open');
@@ -157,19 +176,22 @@ async function loadRes(id){
   return [...m.values()].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
 }
 function card(r,showClass){
-  const own=user&&r.uploadedBy===user.email,c=showClass&&classes.find(x=>x.id===r.classId);
+  const own=user&&r.uploadedBy===user.email,c=showClass&&classes.find(x=>x.id===r.classId),likes=r.likedBy||[],liked=!!user&&likes.includes(user.uid);
   return `<article class="res ${r.type}" data-id="${r.id}">
     <h3>${esc(r.title)} ${r.isApproved?'':'<span class="tag">Awaiting approval</span>'} ${admin&&r.reportsCount?`<span class="tag" style="background:#f8c9c5">${r.reportsCount} report${r.reportsCount>1?'s':''}</span>`:''}</h3>
-    <div class="sub">${r.type==='pdf'?'PDF notes':'Link'} · ${esc((r.uploadedBy||'').split('@')[0])} · ${r.createdAt?.toDate?.().toLocaleDateString()||'just now'}${c?` · <a href="#/class/${c.id}">${esc(c.classCode)} ${esc(c.className)}</a>`:''}</div>
+    <div class="sub">${r.type==='pdf'?'PDF notes':'Link'} · ${esc(r.category||'Uncategorized')} · ${esc((r.uploadedBy||'').split('@')[0])} · ${r.createdAt?.toDate?.().toLocaleDateString()||'just now'}${c?` · <a href="#/class/${c.id}">${esc(c.classCode)} ${esc(c.className)}</a>`:''}</div>
     <div class="acts">
       <a class="btn sm" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">${r.type==='pdf'?'Download':'Open link'}</a>
+      <button class="btn sm" data-act="like" aria-pressed="${liked}" aria-label="Like">${liked?'♥':'♡'} ${likes.length}</button>
+      <button class="btn sm" data-act="comments">Comments</button>
       ${r.type==='pdf'?'<button class="btn sm" data-act="preview">Preview</button>':''}
       ${own||admin?'<button class="btn sm" data-act="edit">Edit</button>':''}
       ${user&&!own?'<button class="btn sm" data-act="report">Report</button>':''}
       ${admin?'<button class="btn sm danger" data-act="del">Delete</button>':''}
-    </div></article>`;
+    </div><div class="cm"></div></article>`;
 }
 async function viewClass(id){
+  catSel='';
   const c=classes.find(x=>x.id===id);
   if(!c)return main('<p class="empty">That class doesn’t exist.</p>');
   main(`<header class="chead"><h1>${esc(c.className)}</h1><div class="meta">
@@ -183,7 +205,13 @@ async function viewClass(id){
   try{cur=await loadRes(id)}catch(e){return $('#feed').innerHTML='<p class="empty">Couldn’t load resources. Check your connection and refresh.</p>'}
   feed();
 }
-function feed(){$('#feed').innerHTML=cur.map(r=>card(r)).join('')||'<p class="empty">No resources yet. Be the first to add notes or a link.</p>'}
+function feed(){
+  const cats=[...new Set(cur.map(r=>r.category||'Uncategorized'))].sort();
+  if(catSel&&!cats.includes(catSel))catSel='';
+  const list=cur.filter(r=>!catSel||(r.category||'Uncategorized')===catSel);
+  $('#feed').innerHTML=(cats.length>1?`<div class="chips">${['',...cats].map(c=>`<button class="chip ${c===catSel?'on':''}" data-cat="${esc(c)}">${c?esc(c):'All'}</button>`).join('')}</div>`:'')
+    +(list.map(r=>card(r)).join('')||'<p class="empty">No resources yet. Be the first to add notes or a link.</p>');
+}
 function viewSearch(q){
   const L=q.toLowerCase();
   const hits=visibleClasses();
@@ -202,6 +230,20 @@ document.addEventListener('click',async e=>{
   const b=e.target.closest('[data-act]');if(!b)return;
   const el=b.closest('[data-id]'),r=cur.find(x=>x.id===el.dataset.id);if(!r)return;
   if(b.dataset.act==='preview'){const f=el.querySelector('iframe');return f?f.remove():el.insertAdjacentHTML('beforeend',`<iframe src="${esc(r.url)}" title="${esc(r.title)}"></iframe>`)}
+  if(b.dataset.act==='like'){
+    if(!user)return toast('Sign in to like resources.');
+    const has=(r.likedBy||[]).includes(user.uid);
+    try{await updateDoc(doc(db,'resources',r.id),{likedBy:has?arrayRemove(user.uid):arrayUnion(user.uid)});
+      r.likedBy=has?r.likedBy.filter(x=>x!==user.uid):[...(r.likedBy||[]),user.uid];
+      b.textContent=`${has?'♡':'♥'} ${r.likedBy.length}`;b.setAttribute('aria-pressed',!has)}
+    catch{toast('Couldn’t update your like.')}
+    return}
+  const box=el.querySelector('.cm');
+  if(b.dataset.act==='comments'){if(box.dataset.open){box.dataset.open='';box.innerHTML='';return}box.dataset.open='1';box.innerHTML='Loading…';return renderComments(box,r.id)}
+  if(b.dataset.act==='cpost'){const i=box.querySelector('input'),t=i.value.trim();if(!t)return;
+    try{await addDoc(collection(db,'resources',r.id,'comments'),{text:t,author:user.email,createdAt:serverTimestamp()});renderComments(box,r.id)}catch{toast('Couldn’t post your comment.')}return}
+  if(b.dataset.act==='cdel'){if(!confirm('Remove this comment?'))return;
+    try{await deleteDoc(doc(db,'resources',r.id,'comments',b.dataset.cid));renderComments(box,r.id)}catch{toast('Couldn’t remove the comment.')}return}
   if(b.dataset.act==='edit')return editForm(r);
   if(b.dataset.act==='report'){
     if(!confirm('Report this resource as inappropriate?'))return;
@@ -218,6 +260,7 @@ async function clearReports(id){const s=await getDocs(query(collection(db,'repor
 async function delRes(r){
   if(!confirm(`Delete “${r.title}”? This can’t be undone.`))return;
   try{
+    (await getDocs(collection(db,'resources',r.id,'comments'))).docs.forEach(d=>deleteDoc(d.ref));
     if(r.storagePath)await deleteObject(ref(storage,r.storagePath)).catch(()=>{});
     await clearReports(r.id);await deleteDoc(doc(db,'resources',r.id));allRes=null;toast('Deleted');
   }catch(e){toast('Couldn’t delete: '+e.code)}
@@ -226,11 +269,13 @@ async function delRes(r){
 /* ---------- Forms ---------- */
 function addForm(classId){
   const d=modal(`<form id="f"><h2>Add a resource</h2>
-    <label><input type="radio" name="t" value="pdf" checked> PDF notes</label>
-    <label><input type="radio" name="t" value="link"> Helpful link</label>
+    <p class="sub"><b>Tip:</b> a Google Drive link is best. Upload to Drive, click Share, choose “Anyone with the link”, copy the link, and paste it here.</p>
+    <label><input type="radio" name="t" value="link" checked> Google Drive or other link (recommended)</label>
+    <label><input type="radio" name="t" value="pdf"> Upload a PDF instead</label>
     <label for="ti">Title</label><input id="ti" type="text" maxlength="120" required>
-    <div id="pdfbox"><label for="fi">PDF file (max ${MAX_MB} MB)</label><input id="fi" type="file" accept="application/pdf"></div>
-    <div id="lnkbox" hidden><label for="ur">Link</label><input id="ur" type="url" placeholder="https://"></div>
+    <label for="ca">Category</label><input id="ca" type="text" list="cats" maxlength="40" required placeholder="Pick one or type a new category"><datalist id="cats">${catOpts()}</datalist>
+    <div id="pdfbox" hidden><label for="fi">PDF file (max ${MAX_MB} MB)</label><input id="fi" type="file" accept="application/pdf"></div>
+    <div id="lnkbox"><label for="ur">Link</label><input id="ur" type="url" placeholder="https://"></div>
     <p class="sub" id="note"></p>
     <div class="row"><button type="button" class="btn" data-close>Cancel</button><button class="btn pri" id="go">Add resource</button></div></form>`);
   const f=d.querySelector('#f');
@@ -253,17 +298,18 @@ function addForm(classId){
         if(!/^https?:\/\//i.test(url))throw'Enter a link starting with http:// or https://.';
       }
       const mod=await getModeration();
-      await addDoc(collection(db,'resources'),{classId,title,type,url,storagePath,uploadedBy:user.email,createdAt:serverTimestamp(),isApproved:admin?true:!mod,reportsCount:0});
+      await addDoc(collection(db,'resources'),{classId,title,type,url,storagePath,category:f.ca.value.trim(),likedBy:[],uploadedBy:user.email,createdAt:serverTimestamp(),isApproved:admin?true:!mod,reportsCount:0});
       allRes=null;d.close();toast(mod&&!admin?'Added. It will appear after an admin approves it.':'Added');viewClass(classId);
     }catch(err){toast(typeof err==='string'?err:'Couldn’t add resource: '+(err.code||err.message));go.disabled=false;$('#note').textContent=''}
   };
 }
 function editForm(r){
   const d=modal(`<form id="f"><h2>Edit resource</h2><label for="ti">Title</label><input id="ti" type="text" maxlength="120" required value="${esc(r.title)}">
+    <label for="ca">Category</label><input id="ca" type="text" list="cats" maxlength="40" required value="${esc(r.category||'')}"><datalist id="cats">${catOpts()}</datalist>
     ${r.type==='link'?`<label for="ur">Link</label><input id="ur" type="url" required value="${esc(r.url)}">`:''}
     <div class="row"><button type="button" class="btn" data-close>Cancel</button><button class="btn pri">Save changes</button></div></form>`);
   d.querySelector('#f').onsubmit=async e=>{
-    e.preventDefault();const u={title:e.target.ti.value.trim()};
+    e.preventDefault();const u={title:e.target.ti.value.trim(),category:e.target.ca.value.trim()};
     if(r.type==='link')u.url=e.target.ur.value.trim();
     if(u.url&&!/^https?:\/\//i.test(u.url))return toast('Enter a link starting with http:// or https://.');
     try{await updateDoc(doc(db,'resources',r.id),u);allRes=null;d.close();toast('Saved');route()}catch(err){toast('Couldn’t save: '+err.code)}
@@ -296,7 +342,8 @@ async function viewAdmin(){
   main(`<h1>Admin dashboard</h1>
     <p><label><input type="checkbox" id="mod" ${mod?'checked':''}> Require approval before student uploads go live</label></p>
     <h2 style="margin:20px 0 8px">Awaiting approval</h2><div id="pend">Loading…</div>
-    <h2 style="margin:20px 0 8px">Reported</h2><div id="rep">Loading…</div>`);
+    <h2 style="margin:20px 0 8px">Reported</h2><div id="rep">Loading…</div>
+    <h2 style="margin:20px 0 8px">Suggestions</h2><div id="sugs">Loading…</div>`);
   $('#mod').onchange=async e=>{try{await setDoc(doc(db,'settings','global'),{moderation:e.target.checked});toast(e.target.checked?'Approval required':'Approval off')}catch{toast('Couldn’t update setting')}};
   const R=collection(db,'resources');
   const [p,r]=await Promise.all([getDocs(query(R,where('isApproved','==',false))),getDocs(query(R,where('reportsCount','>',0)))]);
@@ -305,7 +352,58 @@ async function viewAdmin(){
   const extra=(x,a)=>x.replace('<div class="acts">',`<div class="acts"><button class="btn sm pri" data-act="${a[0]}">${a[1]}</button>`);
   $('#pend').innerHTML=P.map(x=>extra(card(x,true),['approve','Approve'])).join('')||'<p class="empty">Nothing waiting.</p>';
   $('#rep').innerHTML=Rp.map(x=>extra(card(x,true),['dismiss','Dismiss reports'])).join('')||'<p class="empty">No reported resources.</p>';
+  try{const ss=(await getDocs(collection(db,'suggestions'))).docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    $('#sugs').innerHTML=ss.map(x=>`<article class="res"><div>${esc(x.text)}</div><div class="sub">${esc(x.from)} · ${x.createdAt?.toDate?.().toLocaleDateString()||''}</div><button class="btn sm danger" data-sdel="${x.id}">Delete</button></article>`).join('')||'<p class="empty">No suggestions yet.</p>'}
+  catch{$('#sugs').innerHTML='<p class="empty">Couldn’t load suggestions.</p>'}
 }
+
+const helpHtml=()=>`<section class="help"><h2>How this works</h2><ol>
+<li><b>Find your class</b> in the list, or use search and the filters.</li>
+<li><b>Sign in</b> with your @sbs.org Google account to add resources, like, and comment. Anyone can browse without signing in.</li>
+<li><b>Use Google Drive whenever you can.</b> Upload your notes to Drive, click Share, set access to “Anyone with the link”, copy the link, then choose “Add notes or a link” and paste it. Direct PDF uploads work too, but Drive links keep the hub fast and let you update the file later.</li>
+<li><b>Choose a category</b> (Study guides, Practice tests, and so on) so others can find your resource. Type a new name to create a category.</li>
+<li><b>Keep it school-appropriate.</b> Use Report on anything that doesn’t belong. Admins review reports.</li>
+<li><b>Have an idea or found a problem?</b> Use “Send a suggestion” at the bottom of any page to open the suggestion form.</li></ol></section>`;
+const catOpts=()=>[...new Set(['Notes','Study guides','Practice tests','Homework help','Other',...cur.map(r=>r.category).filter(Boolean)])].map(x=>`<option>${esc(x)}</option>`).join('');
+async function renderComments(box,id){
+  try{
+    const cs=(await getDocs(collection(db,'resources',id,'comments'))).docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
+    box.innerHTML=cs.map(c=>`<div class="c"><b>${esc((c.author||'').split('@')[0])}</b> <span class="sub">${c.createdAt?.toDate?.().toLocaleDateString()||''}</span> ${admin?`<button class="btn sm danger" data-act="cdel" data-cid="${c.id}">Remove</button>`:''}<div>${esc(c.text)}</div></div>`).join('')||'<p class="sub">No comments yet.</p>';
+    box.insertAdjacentHTML('beforeend',user?'<div class="cform"><input type="text" maxlength="500" placeholder="Add a comment" aria-label="Add a comment"><button class="btn sm pri" data-act="cpost">Post</button></div>':'<p class="sub">Sign in to comment.</p>');
+  }catch{box.innerHTML='<p class="sub">Couldn’t load comments.</p>'}
+}
+async function viewStats(){
+  main('<h1>Statistics</h1><div id="st">Loading…</div>');
+  try{
+    if(!classes.length)await loadClasses();
+    if(!allRes)allRes=(await getDocs(query(collection(db,'resources'),where('isApproved','==',true)))).docs.map(d=>({...d.data(),id:d.id}));
+  }catch{return $('#st').innerHTML='<p class="empty">Couldn’t load statistics.</p>'}
+  const tally=f=>{const m={};allRes.forEach(r=>{const k=f(r);m[k]=(m[k]||0)+1});return Object.entries(m).sort((a,b)=>b[1]-a[1])};
+  const bars=rows=>{const mx=Math.max(1,...rows.map(r=>r[1]));return rows.map(([k,v])=>`<div class="bar2"><span>${esc(k)}</span><div><i style="width:${v/mx*100}%"></i></div><b>${v}</b></div>`).join('')||'<p class="empty">Nothing yet.</p>'};
+  const ppl={};allRes.forEach(r=>{const p=ppl[r.uploadedBy]??={n:0,l:0};p.n++;p.l+=(r.likedBy||[]).length});
+  const board=Object.entries(ppl).sort((a,b)=>b[1].n-a[1].n||b[1].l-a[1].l).slice(0,10);
+  $('#st').innerHTML=`<p>${allRes.length} resource${allRes.length===1?'':'s'} shared by ${board.length?Object.keys(ppl).length:0} student${Object.keys(ppl).length===1?'':'s'}.</p>
+    <h2>Top contributors</h2>${board.length?`<ol class="lb">${board.map(([e,p])=>`<li><b>${esc(e.split('@')[0])}</b>: ${p.n} resource${p.n>1?'s':''}, ${p.l} like${p.l===1?'':'s'}</li>`).join('')}</ol>`:'<p class="empty">No contributions yet.</p>'}
+    <h2 style="margin-top:20px">Resources by subject</h2>${bars(tally(r=>classes.find(c=>c.id===r.classId)?.discipline||'Other'))}
+    <h2 style="margin-top:20px">Links vs PDF uploads</h2>${bars(tally(r=>r.type==='pdf'?'PDF uploads':'Links'))}
+    <h2 style="margin-top:20px">By category</h2>${bars(tally(r=>r.category||'Uncategorized'))}`;
+}
+function suggestForm(){
+  if(!user)return toast('Sign in with your @sbs.org account to send a suggestion.');
+  const d=modal(`<form id="f"><h2>Send a suggestion</h2><p class="sub">Ideas, missing classes, bugs: anything that would make the hub better. Admins read every one.</p>
+    <label for="sg">Your suggestion</label><textarea id="sg" maxlength="1000" rows="5" required style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px"></textarea>
+    <div class="row"><button type="button" class="btn" data-close>Cancel</button><button class="btn pri">Send</button></div></form>`);
+  d.querySelector('#f').onsubmit=async e=>{e.preventDefault();
+    try{await addDoc(collection(db,'suggestions'),{text:e.target.sg.value.trim(),from:user.email,createdAt:serverTimestamp()});d.close();toast('Thanks! Your suggestion was sent.')}
+    catch{toast('Couldn’t send. Please try again.')}};
+}
+$('#sug').onclick=suggestForm;
+$('#help').onclick=()=>modal(helpHtml()+'<div class="row"><button class="btn" data-close>Close</button></div>');
+document.addEventListener('click',async e=>{
+  const c=e.target.closest('[data-cat]');if(c){catSel=c.dataset.cat;return feed()}
+  const b=e.target.closest('[data-sdel]');if(!b||!confirm('Delete this suggestion?'))return;
+  try{await deleteDoc(doc(db,'suggestions',b.dataset.sdel));viewAdmin()}catch{toast('Couldn’t delete.')}
+});
 
 (async()=>{
   try{await loadClasses()}catch(e){toast('Couldn’t load classes. Check your Firebase config.')}
